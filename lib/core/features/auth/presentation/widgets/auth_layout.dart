@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:warranty_manager/core/core.dart';
+import 'package:warranty_and_purchase_manager/core/core.dart';
 
 /// Спільний макет екранів авторизації: бічне меню + велика біла картка з формою.
 class AuthLayout extends StatelessWidget {

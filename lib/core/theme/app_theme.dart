@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:warranty_manager/core/theme/app_colors.dart';
+import 'package:warranty_and_purchase_manager/core/core.dart';
 
 /// Світла тема застосунку (прототип виконано у світлій темі).
 abstract final class AppTheme {

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:warranty_manager/core/core.dart';
-import 'package:warranty_manager/features/auth/presentation/widgets/auth_header.dart';
-import 'package:warranty_manager/features/auth/presentation/widgets/auth_layout.dart';
+import 'package:warranty_and_purchase_manager/core/core.dart';
+import 'package:warranty_and_purchase_manager/core/features/auth/presentation/widgets/auth_header.dart';
+import 'package:warranty_and_purchase_manager/core/features/auth/presentation/widgets/auth_layout.dart';
+
 
 /// Екран відновлення пароля (ФВ-1). Лист не надсилається — лише
 /// відображається повідомлення про успішне надсилання.

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:warranty_manager/core/theme/app_colors.dart';
-import 'package:warranty_manager/core/widgets/app_sidebar.dart';
+import 'package:warranty_and_purchase_manager/core/core.dart';
 
 /// Каркас десктопного вікна: бічне меню ліворуч і вміст праворуч.
 class AppShell extends StatelessWidget {

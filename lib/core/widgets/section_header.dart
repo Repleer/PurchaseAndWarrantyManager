@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:warranty_manager/core/theme/app_text_styles.dart';
+import 'package:warranty_and_purchase_manager/core/core.dart';
 
 /// Заголовок секції з необов’язковим поясненням праворуч.
 class SectionHeader extends StatelessWidget {

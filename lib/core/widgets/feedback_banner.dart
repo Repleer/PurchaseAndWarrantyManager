@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:warranty_manager/core/theme/app_colors.dart';
+import 'package:warranty_and_purchase_manager/core/core.dart';
 
 /// Смуга зворотного зв’язку: успіх («Зміни профілю збережено.») або помилка.
 class FeedbackBanner extends StatelessWidget {

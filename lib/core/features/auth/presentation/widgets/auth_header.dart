@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:warranty_manager/core/core.dart';
+import 'package:warranty_and_purchase_manager/core/core.dart';
 
 /// Заголовок форми: назва (20 px, Bold) та пояснення (13 px).
 class AuthHeader extends StatelessWidget {

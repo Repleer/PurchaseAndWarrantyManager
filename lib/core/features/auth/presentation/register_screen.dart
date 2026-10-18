@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:warranty_manager/core/core.dart';
-import 'package:warranty_manager/features/auth/presentation/widgets/auth_header.dart';
-import 'package:warranty_manager/features/auth/presentation/widgets/auth_layout.dart';
-import 'package:warranty_manager/features/auth/presentation/widgets/google_auth_section.dart';
+import 'package:warranty_and_purchase_manager/core/core.dart';
+import 'package:warranty_and_purchase_manager/core/features/auth/presentation/widgets/auth_header.dart';
+import 'package:warranty_and_purchase_manager/core/features/auth/presentation/widgets/auth_layout.dart';
+import 'package:warranty_and_purchase_manager/core/features/auth/presentation/widgets/google_auth_section.dart';
+
 
 /// Екран реєстрації (ФВ-1): email + пароль або реєстрація через Google.
 class RegisterScreen extends StatefulWidget {
