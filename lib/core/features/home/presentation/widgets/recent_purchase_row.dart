@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:warranty_and_purchase_manager/core/core.dart';
-import 'package:warranty_and_purchase_manager/core/features/auth/home/data/home_mock_data.dart';
+import 'package:warranty_and_purchase_manager/core/features/home/data/home_mock_data.dart';
 
 /// Рядок таблиці «Останні чеки»: товар, дата, вартість, гарантія, кнопка «Деталі».
 class RecentPurchaseRow extends StatelessWidget {

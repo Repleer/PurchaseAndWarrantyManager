@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:warranty_and_purchase_manager/core/core.dart';
-import 'package:warranty_and_purchase_manager/core/features/auth/home/data/home_mock_data.dart';
-import 'package:warranty_and_purchase_manager/core/features/auth/home/presentation/widgets/expiring_warranty_card.dart';
-import 'package:warranty_and_purchase_manager/core/features/auth/home/presentation/widgets/quick_access_card.dart';
-import 'package:warranty_and_purchase_manager/core/features/auth/home/presentation/widgets/recent_purchase_row.dart';
+import 'package:warranty_and_purchase_manager/core/features/home/data/home_mock_data.dart';
+import 'package:warranty_and_purchase_manager/core/features/home/presentation/widgets/expiring_warranty_card.dart';
+import 'package:warranty_and_purchase_manager/core/features/home/presentation/widgets/quick_access_card.dart';
+import 'package:warranty_and_purchase_manager/core/features/home/presentation/widgets/recent_purchase_row.dart';
 
 
 /// Головний екран (ФВ-3.3, ФВ-5): швидкий доступ до функцій,
