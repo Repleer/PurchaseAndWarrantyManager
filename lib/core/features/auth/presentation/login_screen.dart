@@ -5,8 +5,7 @@ import 'package:warranty_and_purchase_manager/core/features/auth/presentation/wi
 import 'package:warranty_and_purchase_manager/core/features/auth/presentation/widgets/google_auth_section.dart';
 
 
-/// Екран входу (ФВ-1). Бізнес-логіки немає: після перевірки полів
-/// кнопка «Увійти» просто відкриває головний екран.
+/// Екран входу (ФВ-1) з перевіркою демонстраційних облікових даних.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -21,7 +20,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController =
       TextEditingController(text: MockUser.email);
   final TextEditingController _passwordController =
-      TextEditingController(text: '12345678');
+      TextEditingController(text: '');
 
   @override
   void dispose() {
@@ -66,8 +65,13 @@ class _LoginScreenState extends State<LoginScreen> {
               icon: Icons.lock_outline,
               obscureText: true,
               textInputAction: TextInputAction.done,
-              validator: (value) =>
-                  Validators.requiredField(value, 'Введіть пароль.'),
+              validator: (value) {
+                final String? requiredError =
+                    Validators.requiredField(value, 'Введіть пароль.');
+                if (requiredError != null) return requiredError;
+                if (value != MockUser.password) return 'Неправильний логін або пароль.';
+                return null;
+              },
               onFieldSubmitted: (_) => _submit(),
             ),
             const SizedBox(height: 20),
