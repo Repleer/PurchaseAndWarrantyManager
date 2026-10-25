@@ -25,20 +25,31 @@ class ProfileAvatar extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: AppColors.primaryLight,
-        image: image == null
-            ? null
-            : DecorationImage(image: image!, fit: BoxFit.cover),
       ),
       child: image == null
-          ? Text(
-              initials,
-              style: TextStyle(
-                fontSize: size * 0.3,
-                fontWeight: FontWeight.w700,
-                color: AppColors.primary,
+          ? _buildInitials()
+          : ClipOval(
+              child: Image(
+                image: image!,
+                width: size,
+                height: size,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => _buildInitials(),
+                loadingBuilder: (context, child, progress) =>
+                    progress == null ? child : _buildInitials(),
               ),
-            )
-          : null,
+            ),
+    );
+  }
+
+  Widget _buildInitials() {
+    return Text(
+      initials,
+      style: TextStyle(
+        fontSize: size * 0.3,
+        fontWeight: FontWeight.w700,
+        color: AppColors.primary,
+      ),
     );
   }
 }

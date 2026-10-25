@@ -1,15 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:warranty_and_purchase_manager/core/core.dart';
+import 'package:warranty_and_purchase_manager/core/features/auth/application/auth_controller.dart';
 import 'package:warranty_and_purchase_manager/core/features/auth/presentation/widgets/auth_layout.dart';
 import 'package:warranty_and_purchase_manager/core/features/auth/presentation/widgets/google_auth_section.dart';
 
-
-/// Екран вибору облікового запису Google (імітація, без реальної авторизації).
+/// Екран-перехід до справжньої автентифікації Google.
 class GoogleAccountScreen extends StatelessWidget {
   const GoogleAccountScreen({super.key});
 
-  void _signIn(BuildContext context) {
-    Navigator.of(context).pushReplacementNamed(AppRoutes.home);
+  Future<void> _signIn(BuildContext context) async {
+    final AuthController controller = context.read<AuthController>();
+    final bool succeeded = await controller.signInWithGoogle();
+    if (!succeeded && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            controller.failureMessage ?? 'Не вдалося увійти через Google.',
+          ),
+        ),
+      );
+    }
   }
 
   @override
@@ -28,7 +39,10 @@ class GoogleAccountScreen extends StatelessWidget {
                 children: [
                   Icon(Icons.arrow_back, size: 16, color: AppColors.primary),
                   SizedBox(width: 8),
-                  Text('Назад до входу або реєстрації', style: AppTextStyles.link),
+                  Text(
+                    'Назад до входу або реєстрації',
+                    style: AppTextStyles.link,
+                  ),
                 ],
               ),
             ),
@@ -66,7 +80,10 @@ class GoogleAccountScreen extends StatelessWidget {
                     style: AppTextStyles.small.copyWith(height: 1.45),
                   ),
                   const SizedBox(height: 24),
-                  const Text('Обліковий запис Google', style: AppTextStyles.label),
+                  const Text(
+                    'Обліковий запис Google',
+                    style: AppTextStyles.label,
+                  ),
                   const SizedBox(height: 10),
                   _ChooserTile(
                     leading: const ProfileAvatar(
@@ -192,7 +209,11 @@ class _ChooserTile extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, size: 20, color: AppColors.primary),
+              const Icon(
+                Icons.chevron_right,
+                size: 20,
+                color: AppColors.primary,
+              ),
             ],
           ),
         ),

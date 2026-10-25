@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:warranty_and_purchase_manager/core/core.dart';
+import 'package:warranty_and_purchase_manager/core/features/auth/application/auth_controller.dart';
 import 'package:warranty_and_purchase_manager/core/features/auth/presentation/widgets/auth_header.dart';
 import 'package:warranty_and_purchase_manager/core/features/auth/presentation/widgets/auth_layout.dart';
 import 'package:warranty_and_purchase_manager/core/features/auth/presentation/widgets/google_auth_section.dart';
@@ -29,15 +31,34 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _submit() {
-    if (_formKey.currentState!.validate()) {
-      Navigator.of(context).pushReplacementNamed(AppRoutes.home);
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    final AuthController controller = context.read<AuthController>();
+    final bool succeeded = await controller.signIn(
+      email: _emailController.text,
+      password: _passwordController.text,
+    );
+    if (!succeeded && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(controller.failureMessage ?? 'Не вдалося увійти.')),
+      );
+    }
+  }
+
+  Future<void> _signInWithGoogle() async {
+    final AuthController controller = context.read<AuthController>();
+    final bool succeeded = await controller.signInWithGoogle();
+    if (!succeeded && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(controller.failureMessage ?? 'Не вдалося увійти через Google.')),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final NavigatorState navigator = Navigator.of(context);
+    final bool isLoading = context.watch<AuthController>().isLoading;
 
     return AuthLayout(
       child: Form(
@@ -65,21 +86,26 @@ class _LoginScreenState extends State<LoginScreen> {
               icon: Icons.lock_outline,
               obscureText: true,
               textInputAction: TextInputAction.done,
-              validator: (value) {
-                final String? requiredError =
-                    Validators.requiredField(value, 'Введіть пароль.');
-                if (requiredError != null) return requiredError;
-                if (value != MockUser.password) return 'Неправильний логін або пароль.';
-                return null;
-              },
+              validator: (value) =>
+                  Validators.requiredField(value, 'Введіть пароль.'),
               onFieldSubmitted: (_) => _submit(),
             ),
             const SizedBox(height: 20),
             AppButton(
               label: 'Увійти',
               icon: Icons.login,
+              leading: isLoading
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : null,
               expanded: true,
-              onPressed: _submit,
+              onPressed: isLoading ? null : () => _submit(),
             ),
             const SizedBox(height: 20),
             LinkRow(
@@ -98,7 +124,8 @@ class _LoginScreenState extends State<LoginScreen> {
             GoogleAuthSection(
               dividerLabel: 'або увійдіть за допомогою',
               buttonLabel: 'Увійти за допомогою Google',
-              onPressed: () => navigator.pushNamed(AppRoutes.googleAccount),
+              isLoading: isLoading,
+              onPressed: isLoading ? null : () => _signInWithGoogle(),
             ),
           ],
         ),

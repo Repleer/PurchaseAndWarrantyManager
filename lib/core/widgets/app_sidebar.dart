@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:warranty_and_purchase_manager/core/core.dart';
+import 'package:warranty_and_purchase_manager/core/features/auth/application/auth_controller.dart';
 
 
 /// Пункт бічного меню.
@@ -89,11 +91,18 @@ class AppSidebar extends StatelessWidget {
                 route: AppRoutes.login,
               ),
               selected: false,
-              // Вихід: закриваємо сеанс і повертаємось до екрана авторизації.
-              onTap: () => Navigator.of(context).pushNamedAndRemoveUntil(
-                AppRoutes.login,
-                (route) => false,
-              ),
+              onTap: () async {
+                final AuthController controller = context.read<AuthController>();
+                final bool succeeded = await controller.signOut();
+                if (!context.mounted || succeeded) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      controller.failureMessage ?? 'Не вдалося вийти з акаунта.',
+                    ),
+                  ),
+                );
+              },
             ),
         ],
       ),

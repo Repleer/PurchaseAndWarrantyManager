@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:warranty_and_purchase_manager/core/core.dart';
+import 'package:warranty_and_purchase_manager/core/features/auth/application/auth_controller.dart';
 import 'package:warranty_and_purchase_manager/core/features/auth/presentation/widgets/auth_header.dart';
 import 'package:warranty_and_purchase_manager/core/features/auth/presentation/widgets/auth_layout.dart';
 
 
-/// Екран відновлення пароля (ФВ-1). Лист не надсилається — лише
-/// відображається повідомлення про успішне надсилання.
+/// Екран відновлення пароля (ФВ-1).
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
 
@@ -18,7 +19,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final TextEditingController _emailController =
       TextEditingController(text: MockUser.email);
 
-  bool _sent = false;
+  String? _feedbackMessage;
+  bool _feedbackIsError = false;
 
   @override
   void dispose() {
@@ -26,13 +28,25 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     super.dispose();
   }
 
-  void _submit() {
-    setState(() => _sent = _formKey.currentState!.validate());
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    final AuthController controller = context.read<AuthController>();
+    final bool succeeded = await controller.sendPasswordResetEmail(
+      email: _emailController.text,
+    );
+    if (!mounted) return;
+    setState(() {
+      _feedbackIsError = !succeeded;
+      _feedbackMessage = succeeded
+          ? 'Лист із інструкцією надіслано на ${_emailController.text.trim()}.'
+          : controller.failureMessage ?? 'Не вдалося надіслати лист.';
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final NavigatorState navigator = Navigator.of(context);
+    final bool isLoading = context.watch<AuthController>().isLoading;
 
     return AuthLayout(
       child: Form(
@@ -54,7 +68,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               textInputAction: TextInputAction.done,
               validator: Validators.email,
               onChanged: (_) {
-                if (_sent) setState(() => _sent = false);
+                if (_feedbackMessage != null) {
+                  setState(() => _feedbackMessage = null);
+                }
               },
               onFieldSubmitted: (_) => _submit(),
             ),
@@ -62,14 +78,24 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             AppButton(
               label: 'Скинути пароль',
               icon: Icons.send_outlined,
+              leading: isLoading
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : null,
               expanded: true,
-              onPressed: _submit,
+              onPressed: isLoading ? null : _submit,
             ),
-            if (_sent) ...[
+            if (_feedbackMessage != null) ...[
               const SizedBox(height: 20),
               FeedbackBanner(
-                message:
-                    'Лист із інструкцією надіслано на ${_emailController.text.trim()}.',
+                message: _feedbackMessage!,
+                isError: _feedbackIsError,
               ),
             ],
             const SizedBox(height: 20),

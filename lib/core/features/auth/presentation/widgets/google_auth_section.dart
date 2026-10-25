@@ -37,12 +37,14 @@ class GoogleAuthSection extends StatelessWidget {
     required this.buttonLabel,
     required this.onPressed,
     this.spacing = 16,
+    this.isLoading = false,
   });
 
   final String dividerLabel;
   final String buttonLabel;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final double spacing;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -71,7 +73,13 @@ class GoogleAuthSection extends StatelessWidget {
           variant: AppButtonVariant.secondary,
           expanded: true,
           fontWeight: FontWeight.w600,
-          leading: const GoogleLogo(),
+          leading: isLoading
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const GoogleLogo(),
           onPressed: onPressed,
         ),
       ],
