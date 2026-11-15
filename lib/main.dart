@@ -14,6 +14,18 @@ import 'package:warranty_and_purchase_manager/core/features/analytics/data/analy
 import 'package:warranty_and_purchase_manager/core/features/auth/application/auth_controller.dart';
 import 'package:warranty_and_purchase_manager/core/features/auth/data/auth_repository.dart';
 import 'package:warranty_and_purchase_manager/core/features/crashlytics/data/crashlytics_service.dart';
+import 'package:warranty_and_purchase_manager/core/features/purchases/data/purchase_repository.dart';
+import 'package:warranty_and_purchase_manager/core/features/purchases/application/purchases_controller.dart';
+import 'package:warranty_and_purchase_manager/core/features/purchases/data/local_file_purchase_repository.dart';
+import 'package:warranty_and_purchase_manager/core/features/claims/data/claim_repository.dart';
+import 'package:warranty_and_purchase_manager/core/features/claims/application/claims_controller.dart';
+import 'package:warranty_and_purchase_manager/core/features/claims/data/local_file_claim_repository.dart';
+import 'package:warranty_and_purchase_manager/core/features/claims/data/warranty_verification_service.dart';
+import 'package:warranty_and_purchase_manager/core/features/profile/application/profile_controller.dart';
+import 'package:warranty_and_purchase_manager/core/features/profile/data/profile_cache.dart';
+import 'package:warranty_and_purchase_manager/core/features/profile/data/shared_preferences_profile_cache.dart';
+import 'package:warranty_and_purchase_manager/core/data/app_preferences.dart';
+import 'package:warranty_and_purchase_manager/core/data/json_file_store.dart';
 import 'package:warranty_and_purchase_manager/firebase_options.dart';
 
 Future<void> main() async {
@@ -49,14 +61,55 @@ Future<void> main() async {
   final AnalyticsService analytics = AnalyticsService(
     FirebaseAnalytics.instance,
   );
+  final JsonFileStore fileStore = JsonFileStore();
+  if (kDebugMode) {
+    final String basePath = (await fileStore.baseDirectory()).path;
+    debugPrint('Каталог локальних даних: $basePath/users');
+  }
+  final PurchaseRepository purchaseRepository = LocalFilePurchaseRepository(
+    fileStore,
+  );
+  final ClaimRepository claimRepository = LocalFileClaimRepository(fileStore);
+  final WarrantyVerificationService warrantyVerificationService =
+      MockWarrantyVerificationService();
+  final AppPreferences prefs = await AppPreferences.create();
+  final ProfileCache profileCache = SharedPreferencesProfileCache(prefs);
 
   final Widget application = MultiProvider(
     providers: [
       Provider<AuthRepository>.value(value: authRepository),
+      Provider<AppPreferences>.value(value: prefs),
       Provider<AnalyticsService>.value(value: analytics),
+      Provider<PurchaseRepository>.value(value: purchaseRepository),
+      ChangeNotifierProvider<PurchasesController>(
+        create: (ctx) => PurchasesController(
+          ctx.read<PurchaseRepository>(),
+          preferences: ctx.read<AppPreferences>(),
+        ),
+      ),
+      Provider<ClaimRepository>.value(value: claimRepository),
+      Provider<WarrantyVerificationService>.value(
+        value: warrantyVerificationService,
+      ),
+      Provider<ProfileCache>.value(value: profileCache),
+      ChangeNotifierProvider<ProfileController>(
+        create: (ctx) => ProfileController(
+          ctx.read<AuthRepository>(),
+          ctx.read<ProfileCache>(),
+          analytics: ctx.read<AnalyticsService>(),
+        ),
+      ),
+      ChangeNotifierProvider<ClaimsController>(
+        create: (ctx) => ClaimsController(
+          ctx.read<ClaimRepository>(),
+          ctx.read<WarrantyVerificationService>(),
+          preferences: ctx.read<AppPreferences>(),
+        ),
+      ),
       Provider<CrashlyticsService>.value(value: crashlyticsService),
       ChangeNotifierProvider<AuthController>(
-        create: (_) => AuthController(authRepository, analytics),
+        create: (_) =>
+            AuthController(authRepository, analytics, preferences: prefs),
       ),
     ],
     child: const WarrantyManagerApp(),

@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:warranty_and_purchase_manager/core/data/app_preferences.dart';
 import 'package:warranty_and_purchase_manager/core/features/analytics/data/analytics_service.dart';
 import 'package:warranty_and_purchase_manager/core/features/auth/data/auth_failure.dart';
 import 'package:warranty_and_purchase_manager/core/features/auth/data/auth_repository.dart';
@@ -7,13 +8,15 @@ import 'package:warranty_and_purchase_manager/core/features/auth/data/auth_repos
 enum AuthStatus { initial, loading, success, failure }
 
 class AuthController extends ChangeNotifier {
-  AuthController(this._repository, this._analytics);
+  AuthController(this._repository, this._analytics, {this.preferences});
 
   final AuthRepository _repository;
   final AnalyticsService _analytics;
+  final AppPreferences? preferences;
 
   AuthStatus _status = AuthStatus.initial;
   String? _failureMessage;
+  bool _disposed = false;
 
   AuthStatus get status => _status;
   bool get isLoading => _status == AuthStatus.loading;
@@ -43,6 +46,11 @@ class AuthController extends ChangeNotifier {
       () => _repository.signIn(email: email, password: password),
     );
     if (succeeded) {
+      try {
+        await preferences?.setLastEmail(email.trim());
+      } catch (_) {
+        // Помилка локального налаштування не скасовує успішний вхід.
+      }
       await _recordAnalytics(_analytics.logLogin(method: 'password'));
     }
     return succeeded;
@@ -103,9 +111,10 @@ class AuthController extends ChangeNotifier {
   }
 
   Future<bool> _run(Future<void> Function() action) async {
+    if (_disposed) return false;
     _status = AuthStatus.loading;
     _failureMessage = null;
-    notifyListeners();
+    _notify();
 
     try {
       await action();
@@ -117,8 +126,18 @@ class AuthController extends ChangeNotifier {
       return false;
     } finally {
       if (_status == AuthStatus.loading) _status = AuthStatus.initial;
-      notifyListeners();
+      _notify();
     }
+  }
+
+  void _notify() {
+    if (!_disposed) notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
   }
 
   Future<void> _recordAnalytics(Future<void> event) async {

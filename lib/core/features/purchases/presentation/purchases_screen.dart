@@ -1,64 +1,97 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:warranty_and_purchase_manager/core/core.dart';
 
-import '../data/purchases_mock_data.dart';
+import '../../../data/load_status.dart';
+import '../../../data/data_failure.dart';
+import '../../claims/application/claims_controller.dart';
+import '../application/purchases_controller.dart';
 import '../domain/purchase.dart';
 import '../domain/purchase_query.dart';
 import 'widgets/purchase_filters_card.dart';
 import 'widgets/purchase_table_row.dart';
 
-/// Таблиця покупок з локальними чернетками фільтрів і сортуванням.
-class PurchasesScreen extends StatefulWidget {
+/// Таблиця покупок із фільтрами й даними PurchasesController.
+class PurchasesScreen extends StatelessWidget {
   const PurchasesScreen({super.key});
 
-  @override
-  State<PurchasesScreen> createState() => _PurchasesScreenState();
-}
-
-class _PurchasesScreenState extends State<PurchasesScreen> {
-  final TextEditingController _searchController = TextEditingController();
-  PurchaseQuery _draft = const PurchaseQuery();
-  PurchaseQuery _applied = const PurchaseQuery();
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
+  Future<void> _openForm(BuildContext context, [Purchase? initial]) async {
+    final Purchase? result = await Navigator.of(context).pushNamed<Purchase>(
+      initial == null ? AppRoutes.purchaseCreate : AppRoutes.purchaseEdit,
+      arguments: initial,
+    );
+    if (!context.mounted || result == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(initial == null ? 'Покупку додано' : 'Зміни збережено'),
+      ),
+    );
   }
 
-  void _apply() => setState(() => _applied = _draft);
-
-  void _reset() {
-    _searchController.clear();
-    setState(() {
-      _draft = const PurchaseQuery();
-      _applied = const PurchaseQuery();
-    });
-  }
-
-  void _sort(PurchaseSortField field) {
-    final bool ascending = _applied.sortField == field
-        ? !_applied.ascending
-        : false;
-    setState(() {
-      _applied = _applied.copyWith(sortField: field, ascending: ascending);
-      _draft = _draft.copyWith(sortField: field, ascending: ascending);
-    });
-  }
-
-  void _showPending(String message) {
+  Future<void> _delete(BuildContext context, String id) async {
+    final ClaimsController? claims = context.read<ClaimsController?>();
+    if (claims != null && claims.status != LoadStatus.ready) {
+      await claims.load();
+      if (!context.mounted) return;
+      if (claims.status != LoadStatus.ready) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              claims.errorMessage ?? 'Не вдалося завантажити звернення.',
+            ),
+          ),
+        );
+        return;
+      }
+    }
+    final int relatedCount = claims?.forPurchase(id).length ?? 0;
+    final bool confirmed =
+        await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('Видалити покупку?'),
+            content: Text(
+              relatedCount == 0
+                  ? 'Підтвердіть видалення запису про покупку.'
+                  : 'Підтвердіть видалення запису про покупку. '
+                        'Буде також видалено $relatedCount звернень',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('Скасувати'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: const Text('Видалити'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+    if (!confirmed || !context.mounted) return;
+    final PurchasesController controller = context.read<PurchasesController>();
+    final bool removed = await controller.remove(id);
+    if (!context.mounted) return;
+    String message = removed
+        ? 'Покупку видалено'
+        : controller.errorMessage ?? 'Не вдалося видалити покупку.';
+    if (removed && claims != null) {
+      try {
+        await claims.removeForPurchase(id);
+      } on DataFailure catch (error) {
+        message =
+            'Покупку видалено, але звернення видалено не повністю: '
+            '${error.message}';
+      }
+      if (!context.mounted) return;
+    }
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
   Widget build(BuildContext context) {
-    final DateTime now = DateTime.now();
-    final List<Purchase> purchases = applyPurchaseQuery(
-      PurchasesMockData.items,
-      _applied,
-      now,
-    );
     return AppShell.main(
       selectedIndex: 1,
       child: CustomScrollView(
@@ -89,7 +122,7 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
                   AppButton(
                     label: 'Створити запис',
                     icon: Icons.add,
-                    onPressed: () => _showPending('Форма — крок 03'),
+                    onPressed: () => _openForm(context),
                   ),
                 ],
               ),
@@ -97,87 +130,108 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
           ),
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(40, 20, 40, 20),
-            sliver: SliverToBoxAdapter(
-              child: PurchaseFiltersCard(
-                query: _draft,
-                searchController: _searchController,
-                onSearchChanged: (search) =>
-                    setState(() => _draft = _draft.copyWith(search: search)),
-                onCategoryChanged: (category) => setState(
-                  () => _draft = _draft.copyWith(
-                    category: category,
-                    clearCategory: category == null,
-                  ),
-                ),
-                onStatusChanged: (status) => setState(
-                  () => _draft = _draft.copyWith(
-                    status: status,
-                    clearStatus: status == null,
-                  ),
-                ),
-                onApply: _apply,
-              ),
-            ),
+            sliver: SliverToBoxAdapter(child: const PurchaseFiltersCard()),
           ),
-          if (purchases.isEmpty)
-            SliverFillRemaining(
-              hasScrollBody: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(40, 0, 40, 36),
-                child: AppCard(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text(
-                        'Нічого не знайдено',
-                        style: AppTextStyles.sectionTitle,
+          Consumer<PurchasesController>(
+            builder: (context, controller, _) {
+              if (controller.isLoading ||
+                  controller.status == LoadStatus.initial) {
+                return const SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+              if (controller.status == LoadStatus.failure) {
+                return SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(40, 0, 40, 36),
+                    child: AppCard(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          FeedbackBanner(
+                            message: controller.errorMessage ?? 'Не вдалося завантажити дані. Спробуйте ще раз.',
+                            isError: true,
+                          ),
+                          const SizedBox(height: 12),
+                          AppButton(
+                            label: 'Спробувати ще раз',
+                            onPressed: controller.load,
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 12),
-                      TextButton(
-                        onPressed: _reset,
-                        child: const Text('Скинути фільтри'),
+                    ),
+                  ),
+                );
+              }
+              final List<Purchase> purchases = controller.visibleItems;
+              final DateTime now = controller.now;
+              if (purchases.isEmpty) {
+                return SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(40, 0, 40, 36),
+                    child: AppCard(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text(
+                            'Нічого не знайдено',
+                            style: AppTextStyles.sectionTitle,
+                          ),
+                          const SizedBox(height: 12),
+                          TextButton(
+                            onPressed: controller.resetFilters,
+                            child: const Text('Скинути фільтри'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }
+              return SliverPadding(
+                padding: const EdgeInsets.fromLTRB(40, 0, 40, 36),
+                sliver: DecoratedSliver(
+                  position: DecorationPosition.foreground,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppColors.border),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  sliver: SliverMainAxisGroup(
+                    slivers: [
+                      SliverPersistentHeader(
+                        pinned: true,
+                        delegate: _TableHeaderDelegate(
+                          query: controller.appliedQuery,
+                          onSort: controller.toggleSort,
+                        ),
+                      ),
+                      SliverList.separated(
+                        itemCount: purchases.length,
+                        itemBuilder: (context, index) => PurchaseTableRow(
+                          purchase: purchases[index],
+                          now: now,
+                          onView: () => Navigator.of(context).pushNamed(
+                            AppRoutes.purchaseDetails,
+                            arguments: purchases[index].id,
+                          ),
+                          onEdit: () => _openForm(context, purchases[index]),
+                          onDelete: () => _delete(context, purchases[index].id),
+                        ),
+                        separatorBuilder: (context, index) => const Divider(
+                          height: 1,
+                          thickness: 1,
+                          color: AppColors.border,
+                        ),
                       ),
                     ],
                   ),
                 ),
-              ),
-            )
-          else
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(40, 0, 40, 36),
-              sliver: DecoratedSliver(
-                position: DecorationPosition.foreground,
-                decoration: BoxDecoration(
-                  border: Border.all(color: AppColors.border),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                sliver: SliverMainAxisGroup(
-                  slivers: [
-                    SliverPersistentHeader(
-                      pinned: true,
-                      delegate: _TableHeaderDelegate(
-                        query: _applied,
-                        onSort: _sort,
-                      ),
-                    ),
-                    SliverList.separated(
-                      itemCount: purchases.length,
-                      itemBuilder: (context, index) => PurchaseTableRow(
-                        purchase: purchases[index],
-                        now: now,
-                        onAction: () =>
-                            _showPending('Буде реалізовано на кроці 03'),
-                      ),
-                      separatorBuilder: (context, index) => const Divider(
-                        height: 1,
-                        thickness: 1,
-                        color: AppColors.border,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+              );
+            },
+          ),
         ],
       ),
     );

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:warranty_and_purchase_manager/core/core.dart';
-import 'package:warranty_and_purchase_manager/core/features/home/data/home_mock_data.dart';
+import 'package:warranty_and_purchase_manager/core/features/purchases/domain/purchase.dart';
 
 /// Рядок таблиці «Останні чеки»: товар, дата, вартість, гарантія, кнопка «Деталі».
 class RecentPurchaseRow extends StatelessWidget {
@@ -11,14 +11,14 @@ class RecentPurchaseRow extends StatelessWidget {
     required this.onDetails,
   });
 
-  final RecentPurchase purchase;
+  final Purchase purchase;
   final bool showDivider;
   final VoidCallback onDetails;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      constraints: const BoxConstraints(minHeight: 54),
+      constraints: const BoxConstraints(minHeight: 60),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
         border: showDivider
@@ -33,18 +33,24 @@ class RecentPurchaseRow extends StatelessWidget {
           const SizedBox(width: 16),
           SizedBox(
             width: 150,
-            child: Text(purchase.purchaseDate, style: AppTextStyles.small),
+            child: Text(
+              formatDate(purchase.purchaseDate),
+              style: AppTextStyles.small,
+            ),
           ),
           const SizedBox(width: 16),
           SizedBox(
             width: 100,
-            child: Text(purchase.price, style: AppTextStyles.label),
+            child: Text(
+              formatPrice(purchase.price),
+              style: AppTextStyles.label,
+            ),
           ),
           const SizedBox(width: 16),
           SizedBox(
             width: 175,
             child: Text(
-              'Діє до ${purchase.warrantyUntil}',
+              'Діє до ${formatDate(purchase.warrantyUntil)}',
               style: AppTextStyles.small,
             ),
           ),

@@ -2,15 +2,14 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:warranty_and_purchase_manager/core/features/auth/application/auth_controller.dart';
+import 'package:warranty_and_purchase_manager/core/features/purchases/application/purchases_controller.dart';
+import 'package:warranty_and_purchase_manager/core/features/claims/application/claims_controller.dart';
+import 'package:warranty_and_purchase_manager/core/features/profile/application/profile_controller.dart';
 import 'package:warranty_and_purchase_manager/core/routes/app_routes.dart';
 import 'package:warranty_and_purchase_manager/core/theme/app_colors.dart';
 
 class AuthGate extends StatefulWidget {
-  const AuthGate({
-    super.key,
-    required this.navigatorKey,
-    required this.child,
-  });
+  const AuthGate({super.key, required this.navigatorKey, required this.child});
 
   final GlobalKey<NavigatorState> navigatorKey;
   final Widget child;
@@ -23,6 +22,12 @@ class _AuthGateState extends State<AuthGate> {
   late final Stream<User?> _authStateChanges;
   bool _hasReceivedState = false;
   String? _lastUid;
+
+  void _bindSession(String? uid) {
+    context.read<PurchasesController>().bindUser(uid);
+    context.read<ClaimsController>().bindUser(uid);
+    context.read<ProfileController>().bindUser(uid);
+  }
 
   @override
   void initState() {
@@ -37,7 +42,8 @@ class _AuthGateState extends State<AuthGate> {
     _lastUid = uid;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+      if (!mounted || uid != _lastUid) return;
+      _bindSession(uid);
       widget.navigatorKey.currentState?.pushNamedAndRemoveUntil(
         user == null ? AppRoutes.login : AppRoutes.home,
         (_) => false,
@@ -53,7 +59,9 @@ class _AuthGateState extends State<AuthGate> {
         if (snapshot.hasError) {
           return const Scaffold(
             body: Center(
-              child: Text('Не вдалося відновити сеанс. Перезапустіть застосунок.'),
+              child: Text(
+                'Не вдалося відновити сеанс. Перезапустіть застосунок.',
+              ),
             ),
           );
         }

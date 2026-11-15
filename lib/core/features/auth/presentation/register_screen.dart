@@ -38,8 +38,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (!succeeded && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            controller.failureMessage ?? 'Не вдалося створити обліковий запис.',
+          content: Builder(
+            builder: (context) => Text(
+              context.select<AuthController, String?>(
+                    (controller) => controller.failureMessage,
+                  ) ??
+                  'Не вдалося створити обліковий запис.',
+            ),
           ),
         ),
       );
@@ -52,9 +57,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (!succeeded && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            controller.failureMessage ??
-                'Не вдалося зареєструватися через Google.',
+          content: Builder(
+            builder: (context) => Text(
+              context.select<AuthController, String?>(
+                    (controller) => controller.failureMessage,
+                  ) ??
+                  'Не вдалося зареєструватися через Google.',
+            ),
           ),
         ),
       );
@@ -64,7 +73,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     final NavigatorState navigator = Navigator.of(context);
-    final bool isLoading = context.watch<AuthController>().isLoading;
+    final bool isLoading = context.select<AuthController, bool>(
+      (controller) => controller.isLoading,
+    );
 
     return AuthLayout(
       child: Form(

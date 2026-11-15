@@ -1,19 +1,33 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:warranty_and_purchase_manager/core/core.dart';
-import 'package:warranty_and_purchase_manager/core/features/home/data/home_mock_data.dart';
 import 'package:warranty_and_purchase_manager/core/features/home/presentation/widgets/expiring_warranty_card.dart';
 import 'package:warranty_and_purchase_manager/core/features/home/presentation/widgets/quick_access_card.dart';
 import 'package:warranty_and_purchase_manager/core/features/home/presentation/widgets/recent_purchase_row.dart';
-
+import 'package:warranty_and_purchase_manager/core/features/purchases/domain/purchase.dart';
+import 'package:warranty_and_purchase_manager/core/features/purchases/application/purchases_controller.dart';
 
 /// Головний екран (ФВ-3.3, ФВ-5): швидкий доступ до функцій,
 /// гарантії, що скоро закінчуються, та останні чеки.
-/// Усі дані захардкоджені у [HomeMockData].
+/// Дані отримує через PurchasesController.
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   void _open(BuildContext context, String route) {
     Navigator.of(context).pushReplacementNamed(route);
+  }
+
+  void _openPurchase(BuildContext context, Purchase purchase) {
+    Navigator.of(context)
+        .pushNamed(AppRoutes.purchaseDetails, arguments: purchase.id);
+  }
+
+  Future<void> _create(BuildContext context) async {
+    final Purchase? result = await Navigator.of(context)
+        .pushNamed<Purchase>(AppRoutes.purchaseCreate);
+    if (!context.mounted || result == null) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text('Покупку додано')));
   }
 
   /// Розташовує віджети в рядок однакової ширини з відступом [gap].
@@ -28,7 +42,10 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final List<RecentPurchase> purchases = HomeMockData.recentPurchases;
+    final PurchasesController controller = context.watch<PurchasesController>();
+    final List<Purchase> purchases = controller.recent;
+    final List<Purchase> warranties = controller.expiringSoon;
+    final DateTime now = controller.now;
 
     return AppShell.main(
       selectedIndex: 0,
@@ -39,7 +56,10 @@ class HomeScreen extends StatelessWidget {
           children: [
             const Text('Головна', style: AppTextStyles.pageTitle),
             const SizedBox(height: 6),
-            const Text(HomeMockData.pageSubtitle, style: AppTextStyles.small),
+            const Text(
+              'Короткий огляд гарантій, що скоро закінчуються, і ваших останніх покупок.',
+              style: AppTextStyles.small,
+            ),
             const SizedBox(height: 24),
 
             // Швидкий доступ.
@@ -50,7 +70,7 @@ class HomeScreen extends StatelessWidget {
                   title: 'Нова заявка',
                   subtitle: 'Додати покупку та гарантію',
                   actionLabel: 'Створити',
-                  onPressed: () => _open(context, AppRoutes.purchases),
+                  onPressed: () => _create(context),
                 ),
                 QuickAccessCard(
                   icon: Icons.receipt_long_outlined,
@@ -79,11 +99,11 @@ class HomeScreen extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: _equalWidthRow([
-                for (final ExpiringWarranty warranty
-                    in HomeMockData.expiringWarranties)
+                for (final Purchase warranty in warranties)
                   ExpiringWarrantyCard(
                     warranty: warranty,
-                    onTap: () => _open(context, AppRoutes.purchases),
+                    now: now,
+                    onTap: () => _openPurchase(context, warranty),
                   ),
               ], 14),
             ),
@@ -105,7 +125,7 @@ class HomeScreen extends StatelessWidget {
                     RecentPurchaseRow(
                       purchase: purchases[i],
                       showDivider: i < purchases.length - 1,
-                      onDetails: () => _open(context, AppRoutes.purchases),
+                      onDetails: () => _openPurchase(context, purchases[i]),
                     ),
                 ],
               ),

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:warranty_and_purchase_manager/core/core.dart';
+import 'package:warranty_and_purchase_manager/core/data/app_preferences.dart';
 import 'package:warranty_and_purchase_manager/core/features/auth/application/auth_controller.dart';
 import 'package:warranty_and_purchase_manager/core/features/auth/presentation/widgets/auth_header.dart';
 import 'package:warranty_and_purchase_manager/core/features/auth/presentation/widgets/auth_layout.dart';
 import 'package:warranty_and_purchase_manager/core/features/auth/presentation/widgets/google_auth_section.dart';
-
 
 /// Екран входу (ФВ-1) з перевіркою демонстраційних облікових даних.
 class LoginScreen extends StatefulWidget {
@@ -18,11 +18,19 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
-  // Демонстраційні значення, щоб екран збігався з макетом.
-  final TextEditingController _emailController =
-      TextEditingController(text: MockUser.email);
-  final TextEditingController _passwordController =
-      TextEditingController(text: '');
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController(
+    text: '',
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    if (_emailController.text.isEmpty) {
+      _emailController.text =
+          context.read<AppPreferences?>()?.lastEmail ?? MockUser.email;
+    }
+  }
 
   @override
   void dispose() {
@@ -40,7 +48,16 @@ class _LoginScreenState extends State<LoginScreen> {
     );
     if (!succeeded && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(controller.failureMessage ?? 'Не вдалося увійти.')),
+        SnackBar(
+          content: Builder(
+            builder: (context) => Text(
+              context.select<AuthController, String?>(
+                    (controller) => controller.failureMessage,
+                  ) ??
+                  'Не вдалося увійти.',
+            ),
+          ),
+        ),
       );
     }
   }
@@ -50,7 +67,16 @@ class _LoginScreenState extends State<LoginScreen> {
     final bool succeeded = await controller.signInWithGoogle();
     if (!succeeded && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(controller.failureMessage ?? 'Не вдалося увійти через Google.')),
+        SnackBar(
+          content: Builder(
+            builder: (context) => Text(
+              context.select<AuthController, String?>(
+                    (controller) => controller.failureMessage,
+                  ) ??
+                  'Не вдалося увійти через Google.',
+            ),
+          ),
+        ),
       );
     }
   }
@@ -58,7 +84,9 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final NavigatorState navigator = Navigator.of(context);
-    final bool isLoading = context.watch<AuthController>().isLoading;
+    final bool isLoading = context.select<AuthController, bool>(
+      (controller) => controller.isLoading,
+    );
 
     return AuthLayout(
       child: Form(

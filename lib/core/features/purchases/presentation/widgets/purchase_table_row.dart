@@ -19,12 +19,16 @@ class PurchaseTableRow extends StatelessWidget {
     super.key,
     required this.purchase,
     required this.now,
-    required this.onAction,
+    required this.onView,
+    required this.onEdit,
+    required this.onDelete,
   });
 
   final Purchase purchase;
   final DateTime now;
-  final VoidCallback onAction;
+  final VoidCallback onView;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -100,12 +104,12 @@ class PurchaseTableRow extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 TextButton(
-                  onPressed: onAction,
+                  onPressed: onView,
                   style: _actionStyle,
                   child: const Text('Переглянути'),
                 ),
                 TextButton(
-                  onPressed: onAction,
+                  onPressed: onEdit,
                   style: _actionStyle,
                   child: const Text('Змінити'),
                 ),
@@ -113,7 +117,7 @@ class PurchaseTableRow extends StatelessWidget {
                   width: 40,
                   height: 40,
                   child: IconButton(
-                    onPressed: onAction,
+                    onPressed: onDelete,
                     tooltip: 'Видалити',
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints.tightFor(

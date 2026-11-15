@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:warranty_and_purchase_manager/core/core.dart';
-import 'package:warranty_and_purchase_manager/core/features/home/data/home_mock_data.dart';
+import 'package:warranty_and_purchase_manager/core/features/purchases/domain/purchase.dart';
 
 /// Картка гарантії, що скоро закінчується: бейдж із залишком днів, товар, магазин.
 class ExpiringWarrantyCard extends StatelessWidget {
   const ExpiringWarrantyCard({
     super.key,
     required this.warranty,
+    required this.now,
     required this.onTap,
   });
 
-  final ExpiringWarranty warranty;
+  final Purchase warranty;
+  final DateTime now;
   final VoidCallback onTap;
 
   @override
@@ -27,12 +29,8 @@ class ExpiringWarrantyCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              StatusBadge(label: warranty.daysLeftLabel),
-              const Icon(
-                Icons.north_east,
-                size: 18,
-                color: AppColors.primary,
-              ),
+              StatusBadge(label: formatDaysLeft(warranty.daysLeft(now))),
+              const Icon(Icons.north_east, size: 18, color: AppColors.primary),
             ],
           ),
           const SizedBox(height: 10),
@@ -43,10 +41,10 @@ class ExpiringWarrantyCard extends StatelessWidget {
             style: AppTextStyles.bodyStrong,
           ),
           const SizedBox(height: 10),
-          Text(warranty.shop, style: AppTextStyles.small),
+          Text(warranty.store, style: AppTextStyles.small),
           const SizedBox(height: 10),
           Text(
-            'до ${warranty.expiresOn}',
+            'до ${formatDate(warranty.warrantyUntil)}',
             style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,

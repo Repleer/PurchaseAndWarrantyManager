@@ -5,7 +5,6 @@ import 'package:warranty_and_purchase_manager/core/features/auth/application/aut
 import 'package:warranty_and_purchase_manager/core/features/auth/presentation/widgets/auth_header.dart';
 import 'package:warranty_and_purchase_manager/core/features/auth/presentation/widgets/auth_layout.dart';
 
-
 /// Екран відновлення пароля (ФВ-1).
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -16,8 +15,9 @@ class ForgotPasswordScreen extends StatefulWidget {
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  final TextEditingController _emailController =
-      TextEditingController(text: MockUser.email);
+  final TextEditingController _emailController = TextEditingController(
+    text: MockUser.email,
+  );
 
   String? _feedbackMessage;
   bool _feedbackIsError = false;
@@ -46,7 +46,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     final NavigatorState navigator = Navigator.of(context);
-    final bool isLoading = context.watch<AuthController>().isLoading;
+    final bool isLoading = context.select<AuthController, bool>(
+      (controller) => controller.isLoading,
+    );
+    final String? failureMessage = context.select<AuthController, String?>(
+      (controller) => controller.failureMessage,
+    );
 
     return AuthLayout(
       child: Form(
@@ -56,7 +61,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           children: [
             const AuthHeader(
               title: 'Відновити пароль',
-              subtitle: 'Вкажіть email облікового запису, і ми надішлемо лист '
+              subtitle:
+                  'Вкажіть email облікового запису, і ми надішлемо лист '
                   'із посиланням для відновлення пароля.',
             ),
             const SizedBox(height: 20),
@@ -94,7 +100,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             if (_feedbackMessage != null) ...[
               const SizedBox(height: 20),
               FeedbackBanner(
-                message: _feedbackMessage!,
+                message: _feedbackIsError
+                    ? failureMessage ?? _feedbackMessage!
+                    : _feedbackMessage!,
                 isError: _feedbackIsError,
               ),
             ],

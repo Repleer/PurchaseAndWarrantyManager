@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:warranty_and_purchase_manager/core/core.dart';
 import 'package:warranty_and_purchase_manager/core/features/auth/application/auth_controller.dart';
 import 'package:warranty_and_purchase_manager/core/features/crashlytics/data/crashlytics_service.dart';
+import 'package:warranty_and_purchase_manager/core/features/profile/application/profile_controller.dart';
 import 'package:warranty_and_purchase_manager/core/features/profile/data/profile_photo_options.dart';
+import 'package:warranty_and_purchase_manager/core/features/profile/domain/user_profile.dart';
 
 /// Екран керування профілем (ФВ-2): дані Firebase Auth, фото та зміна пароля.
 class ProfileScreen extends StatefulWidget {
@@ -59,23 +60,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _updatePhoto() async {
-    final String? photoUrl = await showDialog<String>(
+    setState(() => _feedbackMessage = null);
+    context.read<ProfileController>().clearFeedback();
+    await showDialog<void>(
       context: context,
       builder: (_) => _PhotoUrlDialog(
-        initialUrl: context.read<AuthController>().currentUser?.photoURL ?? '',
+        initialUrl: context.read<ProfileController>().profile?.photoUrl ?? '',
       ),
     );
-    if (photoUrl == null || !mounted) return;
-
-    final AuthController controller = context.read<AuthController>();
-    final bool saved = await controller.updatePhotoUrl(photoUrl);
-    if (!mounted) return;
-    setState(() {
-      _feedbackIsError = !saved;
-      _feedbackMessage = saved
-          ? 'Зміни профілю збережено.'
-          : controller.failureMessage ?? 'Не вдалося оновити фото.';
-    });
   }
 
   Future<void> _linkGoogle() async {
@@ -124,100 +116,169 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final AuthController controller = context.watch<AuthController>();
-    final User? user = controller.currentUser;
     return AppShell.main(
       selectedIndex: 3,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(40, 36, 40, 40),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            SizedBox(width: 360, child: _buildProfileCard(user)),
-            const SizedBox(width: 24),
-            Expanded(child: _buildPasswordCard(controller.isLoading)),
-          ],
+      child: LayoutBuilder(
+        builder: (context, viewport) => SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(40, 36, 40, 40),
+          child: Column(
+            children: [
+              SizedBox(
+                height: viewport.maxHeight - 76 < 740
+                    ? 740
+                    : viewport.maxHeight - 76,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    SizedBox(
+                      width: 340,
+                      child: Consumer<ProfileController>(
+                        builder: (context, controller, _) {
+                          final bool authLoading = context
+                              .select<AuthController, bool>(
+                                (auth) => auth.isLoading,
+                              );
+                          return _buildProfileCard(
+                            controller.profile,
+                            controller.isOffline,
+                            controller.isSaving || authLoading,
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 24),
+                    Expanded(
+                      child: Builder(
+                        builder: (context) => _buildPasswordCard(
+                          context.select<AuthController, bool>(
+                            (controller) => controller.isLoading,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              Builder(
+                builder: (context) => _buildExtras(
+                  context.select<ProfileController, UserProfile?>(
+                    (controller) => controller.profile,
+                  ),
+                  context.select<AuthController, bool>(
+                    (controller) => controller.isLoading,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildProfileCard(User? user) {
+  Widget _buildProfileCard(UserProfile? user, bool isOffline, bool isLoading) {
     final String displayName = user?.displayName?.trim().isNotEmpty == true
         ? user!.displayName!.trim()
         : 'Користувач';
+    return AppCard(
+      padding: const EdgeInsets.all(28),
+      child: Column(
+        children: [
+          ProfileAvatar(
+            initials: _initials(displayName),
+            image: user?.photoUrl == null
+                ? null
+                : NetworkImage(user!.photoUrl!),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            user?.email ?? 'Email не вказано',
+            textAlign: TextAlign.center,
+            style: AppTextStyles.body,
+          ),
+          if (isOffline) ...[
+            const SizedBox(height: 6),
+            const Text('Показано збережені дані', style: AppTextStyles.caption),
+          ],
+          const SizedBox(height: 6),
+          const Text(
+            'JPG або PNG для нового фото профілю.',
+            textAlign: TextAlign.center,
+            style: AppTextStyles.small,
+          ),
+          const SizedBox(height: 22),
+          AppButton(
+            label: 'Оновити фото',
+            icon: Icons.add_photo_alternate_outlined,
+            variant: AppButtonVariant.secondary,
+            expanded: true,
+            onPressed: isLoading ? null : _updatePhoto,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExtras(UserProfile? user, bool isLoading) {
     final String providers =
-        user?.providerData
+        user?.providers
             .map(
-              (provider) => provider.providerId == 'password'
+              (provider) => provider == 'password'
                   ? 'Email і пароль'
-                  : provider.providerId == 'google.com'
+                  : provider == 'google.com'
                   ? 'Google'
-                  : provider.providerId,
+                  : provider,
             )
             .join(', ') ??
         '—';
     return AppCard(
-      padding: const EdgeInsets.all(28),
-      child: SingleChildScrollView(
-        child: Column(
-          children: [
-            ProfileAvatar(
-              initials: _initials(displayName),
-              image: user?.photoURL == null
-                  ? null
-                  : NetworkImage(user!.photoURL!),
+      padding: const EdgeInsets.all(20),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Додаткові дані акаунта',
+                  style: AppTextStyles.cardTitle,
+                ),
+                const SizedBox(height: 10),
+                _profileDetail('ID', user?.uid ?? '—'),
+                _profileDetail(
+                  'Реєстрація',
+                  user?.createdAt?.toLocal().toString().split(' ').first ?? '—',
+                ),
+                _profileDetail('Спосіб входу', providers),
+              ],
             ),
-            const SizedBox(height: 24),
-            Text(displayName, style: AppTextStyles.cardTitle),
-            const SizedBox(height: 8),
-            Text(
-              user?.email ?? 'Email не вказано',
-              textAlign: TextAlign.center,
-              style: AppTextStyles.small.copyWith(height: 1.4),
+          ),
+          const SizedBox(width: 24),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                AppButton(
+                  label: 'Підключити Google',
+                  icon: Icons.link,
+                  variant: AppButtonVariant.secondary,
+                  expanded: true,
+                  onPressed: isLoading ? null : _linkGoogle,
+                ),
+                const SizedBox(height: 10),
+                AppButton(
+                  label: 'Згенерувати тестову помилку',
+                  icon: Icons.bug_report_outlined,
+                  variant: AppButtonVariant.secondary,
+                  expanded: true,
+                  onPressed: _generateTestCrash,
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-            _profileDetail('ID', user?.uid ?? '—'),
-            _profileDetail(
-              'Реєстрація',
-              user?.metadata.creationTime
-                      ?.toLocal()
-                      .toString()
-                      .split(' ')
-                      .first ??
-                  '—',
-            ),
-            _profileDetail('Спосіб входу', providers),
-            const SizedBox(height: 24),
-            AppButton(
-              label: 'Оновити фото',
-              icon: Icons.add_photo_alternate_outlined,
-              variant: AppButtonVariant.secondary,
-              expanded: true,
-              onPressed: context.watch<AuthController>().isLoading
-                  ? null
-                  : _updatePhoto,
-            ),
-            const SizedBox(height: 10),
-            AppButton(
-              label: 'Підключити Google',
-              icon: Icons.link,
-              variant: AppButtonVariant.secondary,
-              expanded: true,
-              onPressed: context.watch<AuthController>().isLoading
-                  ? null
-                  : _linkGoogle,
-            ),
-            const SizedBox(height: 10),
-            AppButton(
-              label: 'Згенерувати тестову помилку',
-              icon: Icons.bug_report_outlined,
-              variant: AppButtonVariant.secondary,
-              expanded: true,
-              onPressed: _generateTestCrash,
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -253,7 +314,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 label: 'Новий пароль',
                 controller: _newController,
                 icon: Icons.vpn_key_outlined,
-                helperText: 'Щонайменше 8 символів, літера й цифра.',
+                helperText: 'Щонайменше 8 символів.',
                 obscureText: true,
                 textInputAction: TextInputAction.next,
                 validator: (value) =>
@@ -273,30 +334,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 onFieldSubmitted: (_) => _save(),
               ),
               const SizedBox(height: 22),
-              Row(
-                children: [
-                  Expanded(
-                    child: _feedbackMessage == null
-                        ? const SizedBox.shrink()
-                        : FeedbackBanner(
-                            message: _feedbackMessage!,
-                            isError: _feedbackIsError,
-                          ),
-                  ),
-                  const SizedBox(width: 12),
-                  AppButton(
-                    label: 'Зберегти',
-                    icon: Icons.check,
-                    leading: isLoading
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : null,
-                    onPressed: isLoading ? null : _save,
-                  ),
-                ],
+              Builder(
+                builder: (context) {
+                  final String? photoSuccess = context
+                      .select<ProfileController, String?>(
+                        (controller) => controller.successMessage,
+                      );
+                  final String? photoError = context
+                      .select<ProfileController, String?>(
+                        (controller) => controller.errorMessage,
+                      );
+                  final String? message =
+                      _feedbackMessage ?? photoError ?? photoSuccess;
+                  final bool isError = _feedbackMessage != null
+                      ? _feedbackIsError
+                      : photoError != null;
+                  return Row(
+                    children: [
+                      Expanded(
+                        child: message == null
+                            ? const SizedBox.shrink()
+                            : FeedbackBanner(
+                                message: message,
+                                isError: isError,
+                              ),
+                      ),
+                      const SizedBox(width: 12),
+                      AppButton(
+                        label: 'Зберегти',
+                        icon: Icons.check,
+                        leading: isLoading
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : null,
+                        onPressed: isLoading ? null : _save,
+                      ),
+                    ],
+                  );
+                },
               ),
             ],
           ),
@@ -352,6 +432,7 @@ class _PhotoUrlDialog extends StatefulWidget {
 class _PhotoUrlDialogState extends State<_PhotoUrlDialog> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   late final TextEditingController _urlController;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -363,6 +444,21 @@ class _PhotoUrlDialogState extends State<_PhotoUrlDialog> {
   void dispose() {
     _urlController.dispose();
     super.dispose();
+  }
+
+  Future<void> _savePhoto() async {
+    if (!_formKey.currentState!.validate()) return;
+    final ProfileController controller = context.read<ProfileController>();
+    final bool saved = await controller.updatePhoto(_urlController.text.trim());
+    if (!mounted) return;
+    if (saved) {
+      Navigator.of(context).pop();
+    } else {
+      setState(
+        () => _errorMessage =
+            controller.errorMessage ?? 'Не вдалося оновити фото.',
+      );
+    }
   }
 
   @override
@@ -443,6 +539,10 @@ class _PhotoUrlDialogState extends State<_PhotoUrlDialog> {
                   ),
                 ),
               ],
+              if (_errorMessage != null) ...[
+                const SizedBox(height: 12),
+                FeedbackBanner(message: _errorMessage!, isError: true),
+              ],
             ],
           ),
         ),
@@ -452,13 +552,32 @@ class _PhotoUrlDialogState extends State<_PhotoUrlDialog> {
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Скасувати'),
         ),
-        FilledButton(
-          onPressed: () {
-            if (_formKey.currentState!.validate()) {
-              Navigator.of(context).pop(_urlController.text.trim());
-            }
+        Builder(
+          builder: (context) {
+            final bool isSaving = context.select<ProfileController, bool>(
+              (controller) => controller.isSaving,
+            );
+            return FilledButton(
+              onPressed: isSaving ? null : _savePhoto,
+              child: isSaving
+                  ? const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        Text('Зберегти'),
+                      ],
+                    )
+                  : const Text('Зберегти'),
+            );
           },
-          child: const Text('Зберегти'),
         ),
       ],
     );

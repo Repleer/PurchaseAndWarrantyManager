@@ -43,4 +43,21 @@ void main() {
     expect(Validators.requiredNumber('12.5'), isNull);
     expect(Validators.requiredNumber('не число'), isNotNull);
   });
+
+  test('перевіряє додатну вартість та довжину нотаток', () {
+    expect(Validators.positivePrice('14 999,50 ₴'), isNull);
+    expect(Validators.positivePrice('0'), isNotNull);
+    expect(Validators.positivePrice('-5'), isNotNull);
+    expect(Validators.positivePrice('abc'), isNotNull);
+    expect(Validators.positivePrice(''), isNotNull);
+    expect(Validators.purchaseNotes('а' * 500), isNull);
+    expect(Validators.purchaseNotes('а' * 501), isNotNull);
+  });
+
+  test('перевіряє опис гарантійного звернення', () {
+    expect(Validators.claimDescription('коротко'), isNotNull);
+    expect(Validators.claimDescription('Несправність повторюється.'), isNull);
+    expect(Validators.claimDescription('а' * 1000), isNull);
+    expect(Validators.claimDescription('а' * 1001), isNotNull);
+  });
 }

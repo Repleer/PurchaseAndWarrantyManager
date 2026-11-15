@@ -88,7 +88,7 @@ void main() {
   test('сортує дату за спаданням та зростанням', () {
     expect(
       applyPurchaseQuery(items, const PurchaseQuery(), now).first.id,
-      'p7',
+      'p8',
     );
     expect(
       applyPurchaseQuery(

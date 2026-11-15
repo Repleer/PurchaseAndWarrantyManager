@@ -68,4 +68,29 @@ abstract final class Validators {
     if (num.tryParse(value!.trim()) == null) return 'Введіть коректне число.';
     return null;
   }
+
+  /// Вартість покупки повинна бути додатним числом.
+  static String? positivePrice(String? value) {
+    final String text = (value ?? '')
+        .replaceAll(RegExp(r'[\s₴]'), '')
+        .replaceAll(',', '.');
+    if (text.isEmpty) return 'Введіть вартість.';
+    final double? price = double.tryParse(text);
+    if (price == null || !price.isFinite || price <= 0) {
+      return 'Вартість має бути більшою за нуль.';
+    }
+    return null;
+  }
+
+  /// Нотатки можуть містити не більше 500 символів.
+  static String? purchaseNotes(String? value) =>
+      (value?.length ?? 0) > 500 ? 'Не більше 500 символів.' : null;
+
+  /// Опис гарантійного випадку повинен містити від 10 до 1000 символів.
+  static String? claimDescription(String? value) {
+    final int length = value?.trim().length ?? 0;
+    if (length < 10) return 'Опишіть проблему щонайменше 10 символами.';
+    if (length > 1000) return 'Не більше 1000 символів.';
+    return null;
+  }
 }

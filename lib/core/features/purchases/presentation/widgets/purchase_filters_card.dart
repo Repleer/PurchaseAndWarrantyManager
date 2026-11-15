@@ -1,30 +1,44 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:warranty_and_purchase_manager/core/core.dart';
 
+import '../../application/purchases_controller.dart';
 import '../../domain/purchase.dart';
 import '../../domain/purchase_query.dart';
 
 /// Картка з чернеткою пошуку та фільтрів покупок.
-class PurchaseFiltersCard extends StatelessWidget {
-  const PurchaseFiltersCard({
-    super.key,
-    required this.query,
-    required this.searchController,
-    required this.onSearchChanged,
-    required this.onCategoryChanged,
-    required this.onStatusChanged,
-    required this.onApply,
-  });
+class PurchaseFiltersCard extends StatefulWidget {
+  const PurchaseFiltersCard({super.key});
 
-  final PurchaseQuery query;
-  final TextEditingController searchController;
-  final ValueChanged<String> onSearchChanged;
-  final ValueChanged<PurchaseCategory?> onCategoryChanged;
-  final ValueChanged<WarrantyStatus?> onStatusChanged;
-  final VoidCallback onApply;
+  @override
+  State<PurchaseFiltersCard> createState() => _PurchaseFiltersCardState();
+}
+
+class _PurchaseFiltersCardState extends State<PurchaseFiltersCard> {
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final PurchaseQuery query = context
+        .select<PurchasesController, PurchaseQuery>(
+          (controller) => controller.draftQuery,
+        );
+    if (_searchController.text != query.search) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _searchController.text != query.search) {
+          _searchController.value = TextEditingValue(
+            text: query.search,
+            selection: TextSelection.collapsed(offset: query.search.length),
+          );
+        }
+      });
+    }
     return AppCard(
       padding: const EdgeInsets.all(14),
       radius: 12,
@@ -34,12 +48,15 @@ class PurchaseFiltersCard extends StatelessWidget {
           Expanded(
             child: AppTextField(
               label: 'Назва товару',
-              controller: searchController,
+              controller: _searchController,
               icon: Icons.search,
               hintText: 'Пошук за назвою',
               textInputAction: TextInputAction.search,
-              onChanged: onSearchChanged,
-              onFieldSubmitted: (_) => onApply(),
+              onChanged: (search) => context
+                  .read<PurchasesController>()
+                  .updateDraft((query) => query.copyWith(search: search)),
+              onFieldSubmitted: (_) =>
+                  context.read<PurchasesController>().applyFilters(),
             ),
           ),
           const SizedBox(width: 14),
@@ -50,7 +67,13 @@ class PurchaseFiltersCard extends StatelessWidget {
               value: query.category,
               options: PurchaseCategory.values,
               optionLabel: (value) => value.label,
-              onChanged: onCategoryChanged,
+              onChanged: (category) =>
+                  context.read<PurchasesController>().updateDraft(
+                    (query) => query.copyWith(
+                      category: category,
+                      clearCategory: category == null,
+                    ),
+                  ),
             ),
           ),
           const SizedBox(width: 14),
@@ -61,7 +84,13 @@ class PurchaseFiltersCard extends StatelessWidget {
               value: query.status,
               options: WarrantyStatus.values,
               optionLabel: (value) => value.label,
-              onChanged: onStatusChanged,
+              onChanged: (status) =>
+                  context.read<PurchasesController>().updateDraft(
+                    (query) => query.copyWith(
+                      status: status,
+                      clearStatus: status == null,
+                    ),
+                  ),
             ),
           ),
           const SizedBox(width: 14),
@@ -69,7 +98,7 @@ class PurchaseFiltersCard extends StatelessWidget {
             label: 'Фільтрувати',
             icon: Icons.filter_list,
             variant: AppButtonVariant.secondary,
-            onPressed: onApply,
+            onPressed: () => context.read<PurchasesController>().applyFilters(),
           ),
         ],
       ),
