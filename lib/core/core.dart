@@ -7,6 +7,7 @@ export 'theme/app_colors.dart';
 export 'theme/app_text_styles.dart';
 export 'theme/app_theme.dart';
 export 'utils/validators.dart';
+export 'utils/formatters.dart';
 export 'widgets/app_button.dart';
 export 'widgets/app_card.dart';
 export 'widgets/app_shell.dart';

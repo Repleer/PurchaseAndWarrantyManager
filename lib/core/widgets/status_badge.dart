@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:warranty_and_purchase_manager/core/core.dart';
 
 /// Тон бейджа статусу гарантії.
-enum StatusTone { warning, success }
+enum StatusTone { warning, success, error }
 
 /// Заокруглений бейдж із кольоровим індикатором («17 днів»).
 class StatusBadge extends StatelessWidget {
@@ -17,10 +17,11 @@ class StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool isWarning = tone == StatusTone.warning;
-    final Color foreground = isWarning ? AppColors.warning : AppColors.success;
-    final Color background =
-        isWarning ? AppColors.warningBackground : AppColors.successBackground;
+    final (Color foreground, Color background) = switch (tone) {
+      StatusTone.warning => (AppColors.warning, AppColors.warningBackground),
+      StatusTone.success => (AppColors.success, AppColors.successBackground),
+      StatusTone.error => (AppColors.error, AppColors.errorBackground),
+    };
 
     return Container(
       constraints: const BoxConstraints(minHeight: 28),
@@ -35,7 +36,10 @@ class StatusBadge extends StatelessWidget {
           Container(
             width: 7,
             height: 7,
-            decoration: BoxDecoration(color: foreground, shape: BoxShape.circle),
+            decoration: BoxDecoration(
+              color: foreground,
+              shape: BoxShape.circle,
+            ),
           ),
           const SizedBox(width: 6),
           Text(label, style: TextStyle(fontSize: 12, color: foreground)),

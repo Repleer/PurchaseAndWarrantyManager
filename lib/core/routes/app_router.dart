@@ -7,7 +7,7 @@ import 'package:warranty_and_purchase_manager/core/features/auth/presentation/re
 import 'package:warranty_and_purchase_manager/core/features/home/presentation/home_screen.dart';
 import 'package:warranty_and_purchase_manager/core/features/placeholder/presentation/placeholder_screen.dart';
 import 'package:warranty_and_purchase_manager/core/features/profile/presentation/profile_screen.dart';
-
+import 'package:warranty_and_purchase_manager/core/features/purchases/presentation/purchases_screen.dart';
 
 /// Генерує маршрути за іменем. Для десктопного вікна переходи без анімації.
 abstract final class AppRouter {
@@ -17,14 +17,11 @@ abstract final class AppRouter {
       AppRoutes.forgotPassword => (_) => const ForgotPasswordScreen(),
       AppRoutes.googleAccount => (_) => const GoogleAccountScreen(),
       AppRoutes.home => (_) => const HomeScreen(),
-      AppRoutes.purchases => (_) => const PlaceholderScreen(
-            title: 'Покупки та гарантії',
-            selectedIndex: 1,
-          ),
+      AppRoutes.purchases => (_) => const PurchasesScreen(),
       AppRoutes.claims => (_) => const PlaceholderScreen(
-            title: 'Мої звернення',
-            selectedIndex: 2,
-          ),
+        title: 'Мої звернення',
+        selectedIndex: 2,
+      ),
       AppRoutes.profile => (_) => const ProfileScreen(),
       _ => (_) => const LoginScreen(),
     };
