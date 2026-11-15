@@ -26,9 +26,9 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
+    // Email останнього входу зі SharedPreferences; якщо входу ще не було — поле порожнє.
     if (_emailController.text.isEmpty) {
-      _emailController.text =
-          context.read<AppPreferences?>()?.lastEmail ?? MockUser.email;
+      _emailController.text = context.read<AppPreferences?>()?.lastEmail ?? '';
     }
   }
 

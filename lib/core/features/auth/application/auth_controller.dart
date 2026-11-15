@@ -36,6 +36,7 @@ class AuthController extends ChangeNotifier {
       () => _repository.signUp(email: email, password: password),
     );
     if (succeeded) {
+      await _rememberEmail(email);
       await _recordAnalytics(_analytics.logSignUp(method: 'password'));
     }
     return succeeded;
@@ -46,11 +47,7 @@ class AuthController extends ChangeNotifier {
       () => _repository.signIn(email: email, password: password),
     );
     if (succeeded) {
-      try {
-        await preferences?.setLastEmail(email.trim());
-      } catch (_) {
-        // Помилка локального налаштування не скасовує успішний вхід.
-      }
+      await _rememberEmail(email);
       await _recordAnalytics(_analytics.logLogin(method: 'password'));
     }
     return succeeded;
@@ -59,9 +56,23 @@ class AuthController extends ChangeNotifier {
   Future<bool> signInWithGoogle() async {
     final bool succeeded = await _run(_repository.signInWithGoogle);
     if (succeeded) {
+      // Email вводив не користувач, тому беремо його з облікового запису Firebase.
+      await _rememberEmail(_repository.currentUser?.email);
       await _recordAnalytics(_analytics.logLogin(method: 'google'));
     }
     return succeeded;
+  }
+
+  /// Запам'ятовує email останнього входу для підстановки на екрані входу.
+  /// Помилка локального сховища не скасовує успішний вхід.
+  Future<void> _rememberEmail(String? email) async {
+    final String? trimmed = email?.trim();
+    if (trimmed == null || trimmed.isEmpty) return;
+    try {
+      await preferences?.setLastEmail(trimmed);
+    } catch (error) {
+      debugPrint('Не вдалося зберегти email останнього входу: $error');
+    }
   }
 
   Future<bool> linkGoogleToCurrentAccount() {

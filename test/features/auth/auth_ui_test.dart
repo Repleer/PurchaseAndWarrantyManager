@@ -56,6 +56,11 @@ void main() {
     tester,
   ) async {
     await show(tester, const LoginScreen());
+    // Без збереженого входу поле email порожнє — вводимо його явно.
+    await tester.enterText(
+      find.byType(TextFormField).first,
+      'olena.koval@example.com',
+    );
     await tester.enterText(find.byType(TextFormField).last, 'Old12345');
     await tester.tap(find.widgetWithText(AppButton, 'Увійти'));
     await tester.pumpAndSettle();
