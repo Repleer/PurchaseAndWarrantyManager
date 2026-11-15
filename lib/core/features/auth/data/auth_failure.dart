@@ -43,3 +43,5 @@ class AuthFailure implements Exception {
   @override
   String toString() => message;
 }
+
+//Попрацювати з авдиторіями користувачів, валідатори, лог івенти

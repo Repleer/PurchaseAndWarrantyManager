@@ -18,11 +18,11 @@ import 'package:warranty_and_purchase_manager/firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(true);
 
-  final bool useCrashlytics = !kIsWeb &&
+  final bool useCrashlytics =
+      !kIsWeb &&
       {
         TargetPlatform.android,
         TargetPlatform.iOS,
@@ -30,7 +30,6 @@ Future<void> main() async {
       }.contains(defaultTargetPlatform);
   final CrashlyticsService crashlyticsService;
   if (useCrashlytics) {
-    if (!kIsWeb) await GoogleSignIn.instance.initialize();
     final FirebaseCrashlytics crashlytics = FirebaseCrashlytics.instance;
     await crashlytics.setCrashlyticsCollectionEnabled(true);
     FlutterError.onError = crashlytics.recordFlutterFatalError;
@@ -43,34 +42,31 @@ Future<void> main() async {
     crashlyticsService = CrashlyticsService.sentry();
   }
 
-  final FirebaseAuthRepository authRepository =
-      FirebaseAuthRepository(FirebaseAuth.instance, GoogleSignIn.instance);
-  final AnalyticsService analytics =
-      AnalyticsService(FirebaseAnalytics.instance);
+  final FirebaseAuthRepository authRepository = FirebaseAuthRepository(
+    FirebaseAuth.instance,
+    GoogleSignIn.instance,
+  );
+  final AnalyticsService analytics = AnalyticsService(
+    FirebaseAnalytics.instance,
+  );
 
   final Widget application = MultiProvider(
-      providers: [
-        Provider<AuthRepository>.value(value: authRepository),
-        Provider<AnalyticsService>.value(value: analytics),
-        Provider<CrashlyticsService>.value(value: crashlyticsService),
-        ChangeNotifierProvider<AuthController>(
-          create: (_) => AuthController(
-            authRepository,
-            analytics,
-          ),
-        ),
-      ],
-      child: const WarrantyManagerApp(),
-    );
+    providers: [
+      Provider<AuthRepository>.value(value: authRepository),
+      Provider<AnalyticsService>.value(value: analytics),
+      Provider<CrashlyticsService>.value(value: crashlyticsService),
+      ChangeNotifierProvider<AuthController>(
+        create: (_) => AuthController(authRepository, analytics),
+      ),
+    ],
+    child: const WarrantyManagerApp(),
+  );
 
   if (useCrashlytics) {
     runApp(application);
   } else {
-    await SentryFlutter.init(
-      (options) {
-        options.dsn = const String.fromEnvironment('SENTRY_DSN');
-      },
-      appRunner: () => runApp(application),
-    );
+    await SentryFlutter.init((options) {
+      options.dsn = const String.fromEnvironment('SENTRY_DSN');
+    }, appRunner: () => runApp(application));
   }
 }

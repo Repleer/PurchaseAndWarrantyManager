@@ -59,113 +59,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _updatePhoto() async {
-    final TextEditingController urlController = TextEditingController(
-      text: context.read<AuthController>().currentUser?.photoURL ?? '',
-    );
-    final GlobalKey<FormState> photoFormKey = GlobalKey<FormState>();
     final String? photoUrl = await showDialog<String>(
       context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Оновити фото профілю'),
-          content: SizedBox(
-            width: 380,
-            child: Form(
-              key: photoFormKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  TextFormField(
-                    controller: urlController,
-                    decoration: const InputDecoration(
-                      labelText: 'HTTPS-посилання на фото',
-                    ),
-                    validator: Validators.httpsUrl,
-                    onChanged: (_) => setDialogState(() {}),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text('Або оберіть готове зображення:'),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    height: 52,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      children: [
-                        for (final String url in ProfilePhotoOptions.urls)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: InkWell(
-                              onTap: () {
-                                urlController.text = url;
-                                setDialogState(() {});
-                              },
-                              child: ClipOval(
-                                child: Image.network(
-                                  url,
-                                  width: 48,
-                                  height: 48,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, _, _) => const CircleAvatar(
-                                    child: Icon(Icons.person_outline),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  if (urlController.text.startsWith('https://')) ...[
-                    const SizedBox(height: 16),
-                    Center(
-                      child: ClipOval(
-                        child: Image.network(
-                          urlController.text,
-                          width: 84,
-                          height: 84,
-                          fit: BoxFit.cover,
-                          loadingBuilder: (context, child, progress) =>
-                              progress == null
-                              ? child
-                              : const SizedBox(
-                                  width: 84,
-                                  height: 84,
-                                  child: Center(
-                                    child: CircularProgressIndicator(),
-                                  ),
-                                ),
-                          errorBuilder: (_, _, _) => const SizedBox(
-                            width: 84,
-                            height: 84,
-                            child: Icon(Icons.broken_image_outlined),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Скасувати'),
-            ),
-            FilledButton(
-              onPressed: () {
-                if (photoFormKey.currentState!.validate()) {
-                  Navigator.of(dialogContext).pop(urlController.text.trim());
-                }
-              },
-              child: const Text('Зберегти'),
-            ),
-          ],
-        ),
+      builder: (_) => _PhotoUrlDialog(
+        initialUrl: context.read<AuthController>().currentUser?.photoURL ?? '',
       ),
     );
-    urlController.dispose();
     if (photoUrl == null || !mounted) return;
 
     final AuthController controller = context.read<AuthController>();
@@ -201,9 +100,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             content: Text(
               crashService.usesFirebaseCrashlytics
                   ? 'Застосунок аварійно завершиться. Звіт з’явиться після '
-                      'повторного запуску. Продовжити?'
+                        'повторного запуску. Продовжити?'
                   : 'Тестову помилку буде надіслано до Sentry без завершення '
-                      'застосунку. Продовжити?',
+                        'застосунку. Продовжити?',
             ),
             actions: [
               TextButton(
@@ -438,5 +337,130 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (words.isEmpty) return '?';
     if (words.length == 1) return words.first.substring(0, 1).toUpperCase();
     return '${words.first[0]}${words.last[0]}'.toUpperCase();
+  }
+}
+
+class _PhotoUrlDialog extends StatefulWidget {
+  const _PhotoUrlDialog({required this.initialUrl});
+
+  final String initialUrl;
+
+  @override
+  State<_PhotoUrlDialog> createState() => _PhotoUrlDialogState();
+}
+
+class _PhotoUrlDialogState extends State<_PhotoUrlDialog> {
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  late final TextEditingController _urlController;
+
+  @override
+  void initState() {
+    super.initState();
+    _urlController = TextEditingController(text: widget.initialUrl);
+  }
+
+  @override
+  void dispose() {
+    _urlController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Оновити фото профілю'),
+      content: SizedBox(
+        width: 380,
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TextFormField(
+                controller: _urlController,
+                decoration: const InputDecoration(
+                  labelText: 'HTTPS-посилання на фото',
+                ),
+                validator: Validators.httpsUrl,
+                onChanged: (_) => setState(() {}),
+              ),
+              const SizedBox(height: 16),
+              const Text('Або оберіть готове зображення:'),
+              const SizedBox(height: 10),
+              SizedBox(
+                height: 52,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  children: [
+                    for (final String url in ProfilePhotoOptions.urls)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: InkWell(
+                          onTap: () {
+                            _urlController.text = url;
+                            setState(() {});
+                          },
+                          child: ClipOval(
+                            child: Image.network(
+                              url,
+                              width: 48,
+                              height: 48,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) => const CircleAvatar(
+                                child: Icon(Icons.person_outline),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              if (_urlController.text.startsWith('https://')) ...[
+                const SizedBox(height: 16),
+                Center(
+                  child: ClipOval(
+                    child: Image.network(
+                      _urlController.text,
+                      width: 84,
+                      height: 84,
+                      fit: BoxFit.cover,
+                      loadingBuilder: (context, child, progress) =>
+                          progress == null
+                          ? child
+                          : const SizedBox(
+                              width: 84,
+                              height: 84,
+                              child: Center(child: CircularProgressIndicator()),
+                            ),
+                      errorBuilder: (_, _, _) => const SizedBox(
+                        width: 84,
+                        height: 84,
+                        child: Icon(Icons.broken_image_outlined),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Скасувати'),
+        ),
+        FilledButton(
+          onPressed: () {
+            if (_formKey.currentState!.validate()) {
+              Navigator.of(context).pop(_urlController.text.trim());
+            }
+          },
+          child: const Text('Зберегти'),
+        ),
+      ],
+    );
   }
 }

@@ -5,6 +5,17 @@ class AnalyticsService {
 
   final FirebaseAnalytics _analytics;
 
+  Future<void> setAuthState({required String? userId}) async {
+    final String authStatus = userId == null ? 'logged_out' : 'logged_in';
+
+    await _analytics.setUserId(id: userId);
+    await _analytics.setUserProperty(name: 'auth_status', value: authStatus);
+    await _analytics.logEvent(
+      name: 'auth_state_changed',
+      parameters: <String, Object>{'auth_status': authStatus},
+    );
+  }
+
   Future<void> logSignUp({required String method}) {
     return _analytics.logSignUp(signUpMethod: method);
   }

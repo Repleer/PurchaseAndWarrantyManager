@@ -20,33 +20,39 @@ class AuthController extends ChangeNotifier {
   String? get failureMessage => _failureMessage;
   User? get currentUser => _repository.currentUser;
 
-  Stream<User?> authStateChanges() => _repository.authStateChanges();
+  Stream<User?> authStateChanges() => _repository
+      .authStateChanges()
+      .distinct((previous, next) => previous?.uid == next?.uid)
+      .asyncMap((User? user) async {
+        await _recordAnalytics(_analytics.setAuthState(userId: user?.uid));
+        return user;
+      });
 
-  Future<bool> signUp({
-    required String email,
-    required String password,
-  }) async {
+  Future<bool> signUp({required String email, required String password}) async {
     final bool succeeded = await _run(
       () => _repository.signUp(email: email, password: password),
     );
-    if (succeeded) await _recordAnalytics(_analytics.logSignUp(method: 'password'));
+    if (succeeded) {
+      await _recordAnalytics(_analytics.logSignUp(method: 'password'));
+    }
     return succeeded;
   }
 
-  Future<bool> signIn({
-    required String email,
-    required String password,
-  }) async {
+  Future<bool> signIn({required String email, required String password}) async {
     final bool succeeded = await _run(
       () => _repository.signIn(email: email, password: password),
     );
-    if (succeeded) await _recordAnalytics(_analytics.logLogin(method: 'password'));
+    if (succeeded) {
+      await _recordAnalytics(_analytics.logLogin(method: 'password'));
+    }
     return succeeded;
   }
 
   Future<bool> signInWithGoogle() async {
     final bool succeeded = await _run(_repository.signInWithGoogle);
-    if (succeeded) await _recordAnalytics(_analytics.logLogin(method: 'google'));
+    if (succeeded) {
+      await _recordAnalytics(_analytics.logLogin(method: 'google'));
+    }
     return succeeded;
   }
 
@@ -85,8 +91,9 @@ class AuthController extends ChangeNotifier {
   }
 
   Future<bool> updatePhotoUrl(String httpsUrl) async {
-    final bool succeeded =
-        await _run(() => _repository.updatePhotoUrl(httpsUrl));
+    final bool succeeded = await _run(
+      () => _repository.updatePhotoUrl(httpsUrl),
+    );
     if (succeeded) await _recordAnalytics(_analytics.logProfilePhotoUpdated());
     return succeeded;
   }
@@ -117,8 +124,9 @@ class AuthController extends ChangeNotifier {
   Future<void> _recordAnalytics(Future<void> event) async {
     try {
       await event;
-    } on FirebaseException catch (error) {
-      debugPrint('Не вдалося записати подію Analytics: ${error.message}');
+    } on Exception catch (error, stackTrace) {
+      debugPrint('Не вдалося записати подію Analytics: $error');
+      debugPrintStack(stackTrace: stackTrace);
     }
   }
 }
